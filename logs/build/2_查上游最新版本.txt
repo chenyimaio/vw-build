@@ -1,0 +1,12 @@
+﻿2026-10-22T03:53:18.5368031Z ##[group]Run TAG=$(curl -fsSL -H "Authorization: token ***" \
+2026-10-22T03:53:18.5374938Z [36;1mTAG=$(curl -fsSL -H "Authorization: token ***" \[0m
+2026-10-22T03:53:18.5376472Z [36;1m  https://api.github.com/repos/dani-garcia/vaultwarden/releases/latest | jq -r '.tag_name // empty')[0m
+2026-10-22T03:53:18.5377997Z [36;1mif [ -z "$TAG" ] || [ "$TAG" = "null" ]; then[0m
+2026-10-22T03:53:18.5379046Z [36;1m  echo "::error::取上游版本失败"[0m
+2026-10-22T03:53:18.5379816Z [36;1m  exit 1[0m
+2026-10-22T03:53:18.5380561Z [36;1mfi[0m
+2026-10-22T03:53:18.5381249Z [36;1mecho "tag=$TAG" >> "$GITHUB_OUTPUT"[0m
+2026-10-22T03:53:18.5382309Z [36;1mecho "上游最新版本: $TAG"[0m
+2026-10-22T03:53:18.7381201Z shell: /usr/bin/bash -e {0}
+2026-10-22T03:53:18.7382379Z ##[endgroup]
+2026-10-22T03:53:19.0750384Z 上游最新版本: 1.37.4

@@ -34,7 +34,9 @@ jobs:
         id: chk
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
+          # gh 需要显式指定仓库：本 job 没有 checkout，没有 .git 可推断
           if gh release view "vw-${{ steps.up.outputs.tag }}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "release vw-${{ steps.up.outputs.tag }} 已存在，跳过构建"
@@ -69,13 +71,14 @@ jobs:
         if: steps.chk.outputs.exists == 'false' || inputs.force
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           TAG="${{ steps.up.outputs.tag }}"
           VER=$(DATA_FOLDER=/tmp/vwcheck ./vaultwarden-linux-amd64 --version | head -1)
           SIZE=$(du -h vaultwarden-linux-amd64 | cut -f1)
 
-          gh release create "vw-$TAG" \
+          gh release create "vw-$TAG" --repo "$GITHUB_REPOSITORY" \
             --title "Vaultwarden $TAG" \
             --notes "## Vaultwarden $TAG
 

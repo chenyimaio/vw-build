@@ -34,6 +34,7 @@ jobs:
         id: chk
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "caddy-${{ steps.up.outputs.tag }}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -98,6 +99,7 @@ jobs:
         if: steps.chk.outputs.exists == 'false' || inputs.force
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           TAG="${{ steps.up.outputs.tag }}"
@@ -105,7 +107,7 @@ jobs:
           VER=$(./caddy-linux-amd64 version)
           SIZE=$(du -h caddy-linux-amd64 | cut -f1)
 
-          gh release create "caddy-$TAG" \
+          gh release create "caddy-$TAG" --repo "$GITHUB_REPOSITORY" \
             --title "Caddy $TAG ($GOVER)" \
             --notes "## Caddy $TAG
 

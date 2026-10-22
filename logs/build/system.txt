@@ -1,0 +1,8 @@
+2026-10-22T03:53:15.7840000Z Requested labels: ubuntu-latest
+2026-10-22T03:53:15.7840000Z Job defined at: chenyimaio/vw-build/.github/workflows/build-vaultwarden.yml@refs/heads/main
+2026-10-22T03:53:15.7840000Z Waiting for a runner to pick up this job...
+2026-10-22T03:53:15.7800000Z Evaluating build.if
+2026-10-22T03:53:15.7800000Z Evaluating: success()
+2026-10-22T03:53:15.7800000Z Result: true
+2026-10-22T03:53:15.9460000Z Job is about to start running on the hosted runner: GitHub Actions 1000004431
+2026-10-22T03:53:15.9460000Z Job is waiting for a hosted runner to come online.
