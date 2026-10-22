@@ -1,0 +1,91 @@
+name: build-vaultwarden
+
+# 每天北京时间 04:00 检查上游；有新版本就提取二进制并发布
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '强制重建（即使同名 release 已存在）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 查上游最新版本
+        id: up
+        run: |
+          TAG=$(curl -fsSL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/dani-garcia/vaultwarden/releases/latest | jq -r '.tag_name // empty')
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "::error::取上游版本失败"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "上游最新版本: $TAG"
+
+      - name: 判断是否已发布
+        id: chk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "vw-${{ steps.up.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "release vw-${{ steps.up.outputs.tag }} 已存在，跳过构建"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 从官方镜像提取二进制
+        if: steps.chk.outputs.exists == 'false' || inputs.force
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.up.outputs.tag }}"
+
+          # 官方二进制动态链接了这两个库，用来验证可运行
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libmariadb3 libpq5
+
+          docker pull "vaultwarden/server:$TAG"
+          docker create --name vw-tmp "vaultwarden/server:$TAG"
+          docker cp vw-tmp:/vaultwarden ./vaultwarden-linux-amd64
+          docker rm vw-tmp
+          chmod +x ./vaultwarden-linux-amd64
+
+          echo "--- 验证二进制可运行 ---"
+          DATA_FOLDER=/tmp/vwcheck ./vaultwarden-linux-amd64 --version
+
+          sha256sum vaultwarden-linux-amd64 > SHA256SUMS
+          ls -lh vaultwarden-linux-amd64
+          cat SHA256SUMS
+
+      - name: 发布 Release
+        if: steps.chk.outputs.exists == 'false' || inputs.force
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.up.outputs.tag }}"
+          VER=$(DATA_FOLDER=/tmp/vwcheck ./vaultwarden-linux-amd64 --version | head -1)
+          SIZE=$(du -h vaultwarden-linux-amd64 | cut -f1)
+
+          gh release create "vw-$TAG" \
+            --title "Vaultwarden $TAG" \
+            --notes "## Vaultwarden $TAG
+
+          从官方镜像 \`vaultwarden/server:$TAG\` 提取的 linux/amd64 二进制（官方不提供独立二进制，这是唯一可靠来源）。
+
+          - **版本**: $VER
+          - **大小**: $SIZE
+          - **构建时间**: $(date -u '+%F %T UTC')
+          - **校验**: \`sha256sum -c SHA256SUMS\`
+          - **依赖**: 需要宿主机有 \`libmariadb3\` \`libpq5\`" \
+            ./vaultwarden-linux-amd64 ./SHA256SUMS
+
+          echo "已发布 vw-$TAG"
